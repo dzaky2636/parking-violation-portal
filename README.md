@@ -11,8 +11,8 @@ A full-stack parking violation management system with Go microservices backend a
 | Violation Service | Go | 8082 | Violation CRUD, photo upload, async fine calc |
 | Payment Service | Go | 8084 | Mock payment processing |
 | Frontend | Next.js 16 | 3000 | Officer + Member web UI |
-| RabbitMQ | — | 5672 | Async event bus |
 | Supabase | Cloud | — | PostgreSQL, Auth, Storage |
+| Event Bus | Go channels | — | In-process async pub/sub |
 
 ## Quick Start
 
@@ -56,11 +56,10 @@ In the Supabase dashboard, create a public bucket called `violation-photos` for 
 docker compose up --build
 ```
 
-Services will start in order: RabbitMQ → Fine Rule → Violation → Payment → API Gateway → Frontend.
+Services will start in order: Fine Rule → Violation → Payment → API Gateway → Frontend.
 
 - **Frontend:** http://localhost:3000
 - **API Gateway:** http://localhost:8080
-- **RabbitMQ Dashboard:** http://localhost:15672 (guest/guest)
 
 ### 5. Create Test Users
 
@@ -91,8 +90,8 @@ All requests go through the API Gateway (`:8080`). Internal services are not dir
 
 ## The 5 Flows
 
-1. **Officer submits violation** — POST `/api/violations` → photo uploaded to Supabase Storage → violation stored → `violation.created` event published to RabbitMQ
-2. **System calculates fine** — RabbitMQ consumer receives `violation.created` → calls Fine Rule Service → stores `FineCalculation` snapshot with `rule_version_id` → creates `Invoice` → emits `invoice.created`
+1. **Officer submits violation** — POST `/api/violations` → photo uploaded to Supabase Storage → violation stored → `violation.created` event published to in-process event bus
+2. **System calculates fine** — Event bus subscriber receives `violation.created` → calls Fine Rule Service → stores `FineCalculation` snapshot with `rule_version_id` → creates `Invoice` → emits `invoice.created`
 3. **Officer updates fine rules** — POST `/api/rules` (transactional) → old rule superseded → new rule active → existing violations unaffected (immutable snapshot)
 4. **Member pays fine** — POST `/api/payments` → verifies invoice ownership → mock charge (success/failed) → updates invoice + violation status
 5. **Transaction history** — GET `/api/violations` returns joined data: violation + fine calculation + invoice + latest payment transaction
@@ -111,7 +110,7 @@ All requests go through the API Gateway (`:8080`). Internal services are not dir
 | Decision | Why |
 |----------|-----|
 | Supabase Auth (not custom Go auth) | Auth is infrastructure, not domain logic. Supabase provides JWT issuance, user management, and session handling out of the box. |
-| RabbitMQ for async calculation (not HTTP callback) | Decouples violation submission from calculation. If the calculator is slow or down, violations still succeed. Events are durable and retried. |
+| Event bus for async calculation (Go channels, not RabbitMQ) | Decouples violation submission from calculation. If the calculator is slow, violations still succeed. Go channels provide in-process pub/sub without an external broker, simplifying local setup. RabbitMQ can be added back via the existing docker-compose.yml structure if needed for distributed deployments. |
 | No Redis | The working slice has no caching or rate-limiting needs. Added complexity with no benefit. |
 | LATERAL subquery for payment status | Joining the latest payment transaction per invoice is more efficient than N+1 queries or sub-selects. |
 | Individual INSERTs in rule creation (not batch) | For ~24 rows (4 types × 2 windows × 3 levels), the performance difference is negligible. Readability and error isolation per row matters more. |
@@ -121,7 +120,7 @@ All requests go through the API Gateway (`:8080`). Internal services are not dir
 
 - **Comprehensive test suite**: Unit tests for the calculator engine, integration tests for the full async flow, end-to-end tests with Docker Compose
 - **Health checks and circuit breakers**: The API Gateway currently has no circuit breaking for downstream services. Adding a library like `gobreaker` would improve resilience.
-- **Idempotency keys**: The `violation.created` consumer could process duplicate events if RabbitMQ redelivers. Adding idempotency via a `processed_events` table would prevent double-calculation.
+- **Idempotency**: The `violation.created` consumer could process duplicate events. Adding idempotency via a `processed_events` table would prevent double-calculation.
 - **Notifications**: The `invoice.created` event has no consumer yet. Adding an email notification service would complete the flow.
 - **Proper draw.io diagrams**: Replace the Mermaid diagrams in DESIGN.md with draw.io exports as specified, including the explicit rule versioning and calculation snapshot relationships.
 - **API versioning**: Add `/api/v1/` prefix to all routes for future-proofing.
