@@ -8,7 +8,7 @@ export default function OfficerLayout({
   return (
     <>
       <Navbar />
-      <main className="flex-1 bg-slate-50/50">
+      <main className="flex-1 bg-[var(--background)]">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </div>
