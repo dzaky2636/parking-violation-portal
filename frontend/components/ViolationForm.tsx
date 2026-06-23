@@ -5,10 +5,10 @@ import { apiPostForm } from '@/lib/api'
 import type { Violation } from '@/types'
 
 const VIOLATION_TYPES = [
-  { value: 'expired_meter', label: 'Expired Meter' },
-  { value: 'no_parking_zone', label: 'No Parking Zone' },
-  { value: 'blocking_hydrant', label: 'Blocking Hydrant' },
-  { value: 'disabled_spot', label: 'Disabled Spot' },
+  { value: 'expired_meter', label: 'Expired Meter', description: 'Parking meter expired' },
+  { value: 'no_parking_zone', label: 'No Parking Zone', description: 'Vehicle in restricted area' },
+  { value: 'blocking_hydrant', label: 'Blocking Hydrant', description: 'Obstructing fire hydrant' },
+  { value: 'disabled_spot', label: 'Disabled Spot', description: 'Unauthorized use of accessible parking' },
 ]
 
 export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation) => void }) {
@@ -17,6 +17,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
   const [location, setLocation] = useState('')
   const [timestamp, setTimestamp] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
+  const [photoName, setPhotoName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -40,6 +41,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
       setLocation('')
       setTimestamp('')
       setPhoto(null)
+      setPhotoName('')
       onSuccess?.(violation)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit violation')
@@ -48,81 +50,163 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
     }
   }
 
+  const selectedType = VIOLATION_TYPES.find((t) => t.value === type)
+
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-zinc-200">
-      <h2 className="text-lg font-semibold text-zinc-900 mb-4">Submit Violation</h2>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">License Plate</label>
-          <input
-            type="text"
-            value={plate}
-            onChange={(e) => setPlate(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-            placeholder="B 1234 XYZ"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Violation Type</label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-          >
-            {VIOLATION_TYPES.map((vt) => (
-              <option key={vt.value} value={vt.value}>{vt.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Location</label>
-          <input
-            type="text"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-            placeholder="Jl. Sudirman No. 123"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Timestamp</label>
-          <input
-            type="datetime-local"
-            value={timestamp}
-            onChange={(e) => setTimestamp(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Photo</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-            className="w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-zinc-100 file:text-zinc-700 hover:file:bg-zinc-200"
-          />
+    <form onSubmit={handleSubmit} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.293-5.879-4.293 4.293M3.707 6.121l4.293 4.293M12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Submit Violation</h2>
+            <p className="text-sm text-slate-500">Record a new parking violation for processing</p>
+          </div>
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2.5 px-4 bg-zinc-900 text-white text-sm font-medium rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {loading ? 'Submitting...' : 'Submit Violation'}
-      </button>
+      <div className="p-6">
+        {error && (
+          <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">License Plate</label>
+              <input
+                type="text"
+                value={plate}
+                onChange={(e) => setPlate(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm uppercase tracking-wide text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                placeholder="B 1234 XYZ"
+              />
+              <p className="mt-1 text-xs text-slate-500">Indonesian plate format, e.g. B 1234 XYZ</p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Location</label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+                placeholder="Jl. Sudirman No. 123"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Timestamp</label>
+              <input
+                type="datetime-local"
+                value={timestamp}
+                onChange={(e) => setTimestamp(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Violation Type</label>
+              <div className="space-y-2">
+                {VIOLATION_TYPES.map((vt) => (
+                  <label
+                    key={vt.value}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all ${
+                      type === vt.value
+                        ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="violation_type"
+                      value={vt.value}
+                      checked={type === vt.value}
+                      onChange={() => setType(vt.value)}
+                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div>
+                      <span className="block text-sm font-medium text-slate-900">{vt.label}</span>
+                      <span className="block text-xs text-slate-500">{vt.description}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Evidence Photo</label>
+              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 transition-colors hover:border-slate-400 hover:bg-slate-100">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setPhoto(file)
+                    setPhotoName(file?.name || '')
+                  }}
+                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-200"
+                />
+                {photoName && (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H3.75A2.25 2.25 0 0 0 1.5 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
+                    </svg>
+                    {photoName}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+          <button
+            type="button"
+            onClick={() => {
+              setPlate('')
+              setType('expired_meter')
+              setLocation('')
+              setTimestamp('')
+              setPhoto(null)
+              setPhotoName('')
+            }}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Reset
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-500/20 disabled:opacity-50 disabled:shadow-none"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Submitting...
+              </span>
+            ) : (
+              'Submit Violation'
+            )}
+          </button>
+        </div>
+      </div>
     </form>
   )
 }

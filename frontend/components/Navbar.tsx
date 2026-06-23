@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function Navbar() {
   const [role, setRole] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
 
   useEffect(() => {
@@ -24,34 +25,82 @@ export default function Navbar() {
 
   if (!role) return null
 
+  const isOfficer = role === 'officer'
+  const accentColor = isOfficer ? 'indigo' : 'amber'
+  const accentText = isOfficer ? 'text-indigo-700' : 'text-amber-700'
+  const accentBg = isOfficer ? 'bg-indigo-50' : 'bg-amber-50'
+  const accentBorder = isOfficer ? 'border-indigo-200' : 'border-amber-200'
+  const navLinkActive = isOfficer ? 'text-indigo-600' : 'text-amber-600'
+
+  const officerLinks = [
+    { href: '/officer/violations', label: 'Violations' },
+    { href: '/officer/rules', label: 'Fine Rules' },
+  ]
+
+  const memberLinks = [
+    { href: '/member/violations', label: 'My Violations' },
+    { href: '/member/history', label: 'History' },
+  ]
+
+  const links = isOfficer ? officerLinks : memberLinks
+
   return (
-    <nav className="bg-zinc-900 text-white px-6 py-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <span className="font-semibold text-sm">PVP</span>
-          <div className="flex gap-4 text-sm">
-            {role === 'officer' && (
-              <>
-                <a href="/officer/violations" className="hover:text-zinc-300 transition-colors">Violations</a>
-                <a href="/officer/rules" className="hover:text-zinc-300 transition-colors">Rules</a>
-              </>
-            )}
-            {role === 'member' && (
-              <>
-                <a href="/member/violations" className="hover:text-zinc-300 transition-colors">My Violations</a>
-                <a href="/member/history" className="hover:text-zinc-300 transition-colors">History</a>
-              </>
-            )}
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8">
+          <a
+            href={isOfficer ? '/officer/violations' : '/member/violations'}
+            className="flex items-center gap-2"
+          >
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accentBg} ${accentBorder} border`}>
+              <svg className={`h-4 w-4 ${accentText}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+              </svg>
+            </div>
+            <div>
+              <span className="text-sm font-bold tracking-tight text-slate-900">PVP</span>
+              <span className="ml-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">Portal</span>
+            </div>
+          </a>
+
+          <div className="hidden items-center gap-1 sm:flex">
+            {links.map((link) => {
+              const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? `${navLinkActive} ${accentBg}`
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                >
+                  {link.label}
+                </a>
+              )
+            })}
           </div>
         </div>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-zinc-400">{email}</span>
-          <span className="px-2 py-0.5 rounded-full bg-zinc-700 text-xs font-medium uppercase">{role}</span>
+
+        <div className="flex items-center gap-3">
+          <div className="hidden flex-col items-end sm:flex">
+            <span className="text-sm font-medium text-slate-900">{email}</span>
+            <span className="text-xs text-slate-500">{email}</span>
+          </div>
+
+          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${accentBg} ${accentText} ${accentBorder}`}>
+            {role}
+          </span>
+
           <button
             onClick={handleSignOut}
-            className="text-zinc-400 hover:text-white transition-colors"
+            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            title="Sign out"
           >
-            Sign out
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+            </svg>
           </button>
         </div>
       </div>

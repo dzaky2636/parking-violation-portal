@@ -28,20 +28,43 @@ export default function OfficerViolationsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-bold text-zinc-900 mb-2">Violations</h1>
-        <p className="text-sm text-zinc-500">Submit new violations and view all records.</p>
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Violations</h1>
+          <p className="mt-1 text-sm text-slate-500">Submit new violations and review all records.</p>
+        </div>
+        <div className="hidden rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 sm:block">
+          Officer Workspace
+        </div>
       </div>
 
       <ViolationForm onSuccess={(v) => setViolations((prev) => [{ ...v, status: 'pending' }, ...prev])} />
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-zinc-200">
-        <h2 className="text-lg font-semibold text-zinc-900 mb-4">All Violations</h2>
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">All Violations</h2>
+          <span className="text-sm text-slate-500">{violations.length} records</span>
+        </div>
+
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>
+          <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            {error}
+          </div>
         )}
+
         {loading ? (
-          <p className="text-sm text-zinc-400">Loading...</p>
+          <div className="flex h-48 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+            <div className="flex items-center gap-3 text-slate-500">
+              <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-sm">Loading violations...</span>
+            </div>
+          </div>
         ) : (
           <ViolationList violations={violations} />
         )}

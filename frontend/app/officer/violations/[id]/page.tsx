@@ -5,6 +5,38 @@ import { useParams } from 'next/navigation'
 import { apiGet } from '@/lib/api'
 import type { ViolationWithDetails } from '@/types'
 
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: string }> = {
+  pending: {
+    label: 'Pending',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    border: 'border-amber-200',
+    icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  },
+  invoiced: {
+    label: 'Invoiced',
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    icon: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75h4.5v4.5h-4.5v-4.5Z',
+  },
+  paid: {
+    label: 'Paid',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    border: 'border-emerald-200',
+    icon: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  },
+}
+
+function formatIDR(amount: number): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount)
+}
+
 export default function ViolationDetailPage() {
   const params = useParams()
   const [violation, setViolation] = useState<ViolationWithDetails | null>(null)
@@ -17,46 +49,109 @@ export default function ViolationDetailPage() {
       .finally(() => setLoading(false))
   }, [params.id])
 
-  if (loading) return <p className="text-sm text-zinc-400">Loading...</p>
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="flex items-center gap-3 text-slate-500">
+          <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span className="text-sm">Loading violation details...</span>
+        </div>
+      </div>
+    )
+  }
+
   if (!violation) return <p className="text-sm text-red-600">Violation not found.</p>
+
+  const status = STATUS_CONFIG[violation.status] || STATUS_CONFIG.pending
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-zinc-900">Violation Detail</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Violation Detail</h1>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium ${status.bg} ${status.text} ${status.border}`}>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d={status.icon} />
+          </svg>
+          {status.label}
+        </span>
+      </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-zinc-200 grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <span className="text-zinc-500">Plate:</span>
-          <span className="ml-2 font-medium text-zinc-900">{violation.plate}</span>
-        </div>
-        <div>
-          <span className="text-zinc-500">Type:</span>
-          <span className="ml-2 font-medium text-zinc-900 capitalize">{violation.violation_type.replace(/_/g, ' ')}</span>
-        </div>
-        <div>
-          <span className="text-zinc-500">Location:</span>
-          <span className="ml-2 font-medium text-zinc-900">{violation.location}</span>
-        </div>
-        <div>
-          <span className="text-zinc-500">Timestamp:</span>
-          <span className="ml-2 font-medium text-zinc-900">{new Date(violation.violation_timestamp).toLocaleString()}</span>
-        </div>
-        <div>
-          <span className="text-zinc-500">Status:</span>
-          <span className="ml-2 font-medium text-zinc-900">{violation.status}</span>
-        </div>
-        {violation.fine_calculation && (
-          <>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+          <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+            <h2 className="text-base font-semibold text-slate-900">Violation Information</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
             <div>
-              <span className="text-zinc-500">Fine:</span>
-              <span className="ml-2 font-medium text-zinc-900">Rp {violation.fine_calculation.total_fine.toLocaleString('id-ID')}</span>
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">License Plate</p>
+              <p className="mt-1 font-mono text-lg font-semibold uppercase tracking-wide text-slate-900">{violation.plate}</p>
             </div>
             <div>
-              <span className="text-zinc-500">Rule Version:</span>
-              <span className="ml-2 font-medium text-zinc-900">v{violation.fine_calculation.rule_version_id}</span>
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Violation Type</p>
+              <p className="mt-1 text-lg font-medium capitalize text-slate-900">{violation.violation_type.replace(/_/g, ' ')}</p>
             </div>
-          </>
-        )}
+            <div className="sm:col-span-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Location</p>
+              <p className="mt-1 text-base text-slate-700">{violation.location}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Timestamp</p>
+              <p className="mt-1 text-base text-slate-700">{new Date(violation.violation_timestamp).toLocaleString('id-ID')}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Submitted</p>
+              <p className="mt-1 text-base text-slate-700">{new Date(violation.created_at).toLocaleString('id-ID')}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {violation.fine_calculation && (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white px-6 py-4">
+                <h2 className="text-base font-semibold text-slate-900">Fine Calculation</h2>
+              </div>
+              <div className="p-6">
+                <div className="mb-4 text-center">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Total Fine</p>
+                  <p className="mt-1 font-mono text-3xl font-bold text-slate-900">{formatIDR(violation.fine_calculation.total_fine)}</p>
+                </div>
+                <div className="space-y-3 border-t border-slate-100 pt-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Base amount</span>
+                    <span className="font-medium text-slate-900">{formatIDR(violation.fine_calculation.base_amount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Time multiplier</span>
+                    <span className="font-medium text-slate-900">{violation.fine_calculation.time_multiplier}x</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Repeat multiplier</span>
+                    <span className="font-medium text-slate-900">{violation.fine_calculation.repeat_multiplier}x</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-3">
+                    <span className="text-slate-500">Rule version</span>
+                    <span className="font-mono font-medium text-slate-900">{violation.fine_calculation.rule_version_id.slice(0, 8)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {violation.photo_url && (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                <h2 className="text-base font-semibold text-slate-900">Evidence Photo</h2>
+              </div>
+              <div className="p-2">
+                <img src={violation.photo_url} alt="Violation evidence" className="rounded-xl bg-slate-100 object-cover" />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
