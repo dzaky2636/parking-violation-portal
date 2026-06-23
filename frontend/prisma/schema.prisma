@@ -60,6 +60,9 @@ model FineCalculation {
 
   violation Violation @relation(fields: [violation_id], references: [id], onDelete: Cascade)
 
+  // Manual FK to rules.fine_rules(id) - no cascade (immutable snapshot)
+  // ALTER TABLE violations.fine_calculations ADD CONSTRAINT fine_calculations_rule_version_id_fkey FOREIGN KEY (rule_version_id) REFERENCES rules.fine_rules(id);
+
   @@schema("violations")
   @@map("fine_calculations")
 }
