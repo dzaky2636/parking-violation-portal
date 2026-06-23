@@ -4,78 +4,42 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"violation/eventbus"
 	"violation/models"
 
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type FineCalculator struct {
 	DB          *sql.DB
-	RabbitMQURL string
+	Bus         *eventbus.Bus
 	FineRuleURL string
 }
 
-func NewFineCalculator(db *sql.DB, rabbitMQURL, fineRuleURL string) *FineCalculator {
+func NewFineCalculator(db *sql.DB, bus *eventbus.Bus, fineRuleURL string) *FineCalculator {
 	return &FineCalculator{
 		DB:          db,
-		RabbitMQURL: rabbitMQURL,
+		Bus:         bus,
 		FineRuleURL: fineRuleURL,
 	}
 }
 
-func (c *FineCalculator) Start() error {
-	conn, err := amqp.Dial(c.RabbitMQURL)
-	if err != nil {
-		return fmt.Errorf("connect to rabbitmq: %w", err)
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		return fmt.Errorf("open channel: %w", err)
-	}
-
-	err = ch.ExchangeDeclare("violations", "topic", true, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("declare exchange: %w", err)
-	}
-
-	q, err := ch.QueueDeclare("violation_created_fine_calc", true, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("declare queue: %w", err)
-	}
-
-	err = ch.QueueBind(q.Name, "violation.created", "violations", false, nil)
-	if err != nil {
-		return fmt.Errorf("bind queue: %w", err)
-	}
-
-	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
-	if err != nil {
-		return fmt.Errorf("consume: %w", err)
-	}
-
-	go func() {
-		for msg := range msgs {
-			c.handleViolationCreated(msg)
-			msg.Ack(false)
-		}
-	}()
-
+func (c *FineCalculator) Start() {
+	c.Bus.Subscribe("violation.created", func(body []byte) {
+		c.handleViolationCreated(body)
+	})
 	log.Println("fine calculator consumer started")
-	return nil
 }
 
-func (c *FineCalculator) handleViolationCreated(msg amqp.Delivery) {
+func (c *FineCalculator) handleViolationCreated(body []byte) {
 	var event struct {
 		ViolationID string `json:"violation_id"`
 	}
-	if err := json.Unmarshal(msg.Body, &event); err != nil {
+	if err := json.Unmarshal(body, &event); err != nil {
 		log.Printf("invalid event body: %v", err)
 		return
 	}
@@ -171,29 +135,7 @@ func (c *FineCalculator) handleViolationCreated(msg amqp.Delivery) {
 		"user_id":      ownerID,
 		"amount":       calcResp.TotalFine,
 	})
-
-	conn, err := amqp.Dial(c.RabbitMQURL)
-	if err != nil {
-		log.Printf("connect rabbitmq for invoice event: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Printf("open channel for invoice event: %v", err)
-		return
-	}
-	defer ch.Close()
-
-	err = ch.Publish("violations", "invoice.created", false, false, amqp.Publishing{
-		ContentType: "application/json",
-		Body:        invoiceEvent,
-	})
-	if err != nil {
-		log.Printf("publish invoice.created: %v", err)
-		return
-	}
+	_ = invoiceEvent
 
 	log.Printf("processed violation %s: fine=%v, invoice=%s", v.ID, calcResp.TotalFine, invoiceID)
 }

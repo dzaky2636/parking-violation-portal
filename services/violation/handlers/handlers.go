@@ -7,19 +7,18 @@ import (
 	"net/http"
 	"time"
 
+	"violation/eventbus"
 	"violation/models"
 	"violation/storage"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Handler struct {
-	DB           *sql.DB
-	Storage      *storage.SupabaseStorage
-	RabbitMQURL  string
-	RabbitMQConn *amqp.Connection
+	DB      *sql.DB
+	Storage *storage.SupabaseStorage
+	Bus     *eventbus.Bus
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
@@ -94,19 +93,7 @@ func (h *Handler) CreateViolation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventBody, _ := json.Marshal(map[string]string{"violation_id": violationID})
-	ch, err := h.RabbitMQConn.Channel()
-	if err != nil {
-		log.Printf("rabbitmq channel error: %v", err)
-	} else {
-		defer ch.Close()
-		err = ch.Publish("violations", "violation.created", false, false, amqp.Publishing{
-			ContentType: "application/json",
-			Body:        eventBody,
-		})
-		if err != nil {
-			log.Printf("publish violation.created: %v", err)
-		}
-	}
+	h.Bus.Publish("violation.created", eventBody)
 
 	var violation models.Violation
 	err = h.DB.QueryRow(

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"violation/consumer"
+	"violation/eventbus"
 	"violation/handlers"
 	"violation/storage"
 
@@ -18,18 +19,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		log.Fatal("DATABASE_URL environment variable is required")
-	}
-
-	rabbitMQURL := os.Getenv("RABBITMQ_URL")
-	if rabbitMQURL == "" {
-		rabbitMQURL = "amqp://guest:guest@localhost:5672/"
 	}
 
 	fineRuleURL := os.Getenv("FINE_RULE_SERVICE_URL")
@@ -62,23 +57,8 @@ func main() {
 	}
 	log.Println("connected to database")
 
-	rabbitConn, err := amqp.Dial(rabbitMQURL)
-	if err != nil {
-		log.Fatalf("failed to connect to rabbitmq: %v", err)
-	}
-	defer rabbitConn.Close()
-	log.Println("connected to rabbitmq")
-
-	ch, err := rabbitConn.Channel()
-	if err != nil {
-		log.Fatalf("failed to open rabbitmq channel: %v", err)
-	}
-	defer ch.Close()
-
-	err = ch.ExchangeDeclare("violations", "topic", true, false, false, false, nil)
-	if err != nil {
-		log.Fatalf("failed to declare exchange: %v", err)
-	}
+	bus := eventbus.New()
+	bus.Start()
 
 	var st *storage.SupabaseStorage
 	if supabaseURL != "" && supabaseServiceKey != "" {
@@ -87,10 +67,9 @@ func main() {
 	}
 
 	h := &handlers.Handler{
-		DB:           db,
-		Storage:      st,
-		RabbitMQURL:  rabbitMQURL,
-		RabbitMQConn: rabbitConn,
+		DB:      db,
+		Storage: st,
+		Bus:     bus,
 	}
 
 	r := chi.NewRouter()
@@ -98,10 +77,8 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Mount("/", h.Routes())
 
-	calc := consumer.NewFineCalculator(db, rabbitMQURL, fineRuleURL)
-	if err := calc.Start(); err != nil {
-		log.Printf("WARNING: fine calculator consumer failed to start: %v", err)
-	}
+	calc := consumer.NewFineCalculator(db, bus, fineRuleURL)
+	calc.Start()
 
 	port := os.Getenv("PORT")
 	if port == "" {

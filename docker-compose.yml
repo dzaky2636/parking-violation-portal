@@ -1,19 +1,6 @@
 version: "3.8"
 
 services:
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   fine-rule:
     build:
       context: ./services/fine-rule
@@ -26,7 +13,7 @@ services:
       PORT: "8083"
     restart: unless-stopped
 
-  violation:
+   violation:
     build:
       context: ./services/violation
       dockerfile: Dockerfile
@@ -35,15 +22,12 @@ services:
       - "8082:8082"
     environment:
       DATABASE_URL: ${SUPABASE_DATABASE_URL}
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       FINE_RULE_SERVICE_URL: http://fine-rule:8083
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       STORAGE_BUCKET: violation-photos
       PORT: "8082"
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       fine-rule:
         condition: service_started
     restart: unless-stopped
