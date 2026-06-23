@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,7 +16,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -44,10 +44,13 @@ func main() {
 		storageBucket = "violation-photos"
 	}
 
-	db, err := sql.Open("postgres", dbURL)
+	config, err := pgx.ParseConfig(dbURL)
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		log.Fatalf("failed to parse database URL: %v", err)
 	}
+	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	db := stdlib.OpenDB(*config)
 	defer db.Close()
 
 	db.SetMaxOpenConns(10)

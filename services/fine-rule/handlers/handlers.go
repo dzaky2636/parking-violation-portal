@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 type Handler struct {
@@ -134,11 +133,13 @@ func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	var nextVersion int
 	if err := tx.QueryRow("SELECT COALESCE(MAX(version), 0) + 1 FROM rules.fine_rules").Scan(&nextVersion); err != nil {
+		log.Printf("compute next version error: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to compute next version")
 		return
 	}
 
 	if _, err := tx.Exec("UPDATE rules.fine_rules SET status = 'superseded' WHERE status = 'active'"); err != nil {
+		log.Printf("supersede active rule error: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to supersede active rule")
 		return
 	}
@@ -154,6 +155,7 @@ func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		ruleID, nextVersion, "active", createdByNull, now, now,
 	)
 	if err != nil {
+		log.Printf("insert rule error: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to insert rule")
 		return
 	}
@@ -185,17 +187,20 @@ func (h *Handler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(); err != nil {
+		log.Printf("commit rule error: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to commit rule")
 		return
 	}
 
 	rule, err := h.getRuleByQuery("SELECT id, version, status, created_by, effective_from, created_at FROM rules.fine_rules WHERE id = $1", ruleID)
 	if err != nil {
+		log.Printf("fetch created rule error: %v", err)
 		writeError(w, http.StatusInternalServerError, "rule created but failed to fetch")
 		return
 	}
 	details, err := h.getRuleDetails(rule.ID)
 	if err != nil {
+		log.Printf("fetch created rule details error: %v", err)
 		writeError(w, http.StatusInternalServerError, "rule created but failed to load details")
 		return
 	}
@@ -284,7 +289,7 @@ func (h *Handler) batchGetRuleDetails(ruleIDs []string) (map[string][]models.Fin
 		FROM rules.fine_rule_details
 		WHERE rule_id = ANY($1)
 		ORDER BY violation_type, repeat_count_min, time_multiplier_start
-	`, pq.Array(ruleIDs))
+	`, ruleIDs)
 	if err != nil {
 		return nil, err
 	}
