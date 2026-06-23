@@ -125,11 +125,12 @@ func (h *Handler) CreateViolation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListViolations(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("user_id")
+	userID := r.Header.Get("X-User-ID")
+	userRole := r.Header.Get("X-User-Role")
 
 	var rows *sql.Rows
 	var err error
-	if userID != "" {
+	if userRole == "member" && userID != "" {
 		rows, err = h.DB.Query(`
 			SELECT v.id, v.plate, v.violation_type, v.location, v.violation_timestamp,
 				v.photo_url, v.status, v.submitted_by, v.created_at, v.updated_at,
