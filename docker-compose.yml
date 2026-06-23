@@ -1,0 +1,97 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  fine-rule:
+    build:
+      context: ./services/fine-rule
+      dockerfile: Dockerfile
+    container_name: fine-rule
+    ports:
+      - "8083:8083"
+    environment:
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      PORT: "8083"
+    restart: unless-stopped
+
+  violation:
+    build:
+      context: ./services/violation
+      dockerfile: Dockerfile
+    container_name: violation
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      FINE_RULE_SERVICE_URL: http://fine-rule:8083
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      STORAGE_BUCKET: violation-photos
+      PORT: "8082"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      fine-rule:
+        condition: service_started
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+    container_name: payment
+    ports:
+      - "8084:8084"
+    environment:
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      PORT: "8084"
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      FINE_RULE_SERVICE_URL: http://fine-rule:8083
+      VIOLATION_SERVICE_URL: http://violation:8082
+      PAYMENT_SERVICE_URL: http://payment:8084
+      PORT: "8080"
+    depends_on:
+      - fine-rule
+      - violation
+      - payment
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      NEXT_PUBLIC_API_GATEWAY_URL: http://api-gateway:8080
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
