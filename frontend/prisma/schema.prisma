@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public", "violations", "rules", "payments"]
+}
+
+model Profile {
+  user_id   String   @id @db.Uuid
+  role      String   @db.VarChar(20)
+  full_name String   @db.VarChar(255)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  @@schema("public")
+  @@map("profiles")
+}
+
+model MemberPlate {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  plate      String   @unique @db.VarChar(20)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  @@schema("public")
+  @@map("member_plates")
+  @@index([user_id])
+}
+
+model Violation {
+  id                  String   @id @default(uuid()) @db.Uuid
+  plate               String   @db.VarChar(20)
+  violation_type      String   @db.VarChar(50)
+  location            String   @db.VarChar(500)
+  violation_timestamp DateTime @db.Timestamptz()
+  photo_url           String   @default("") @db.VarChar(1000)
+  status              String   @default("pending") @db.VarChar(20)
+  submitted_by        String?  @db.Uuid
+  created_at          DateTime @default(now()) @db.Timestamptz()
+  updated_at          DateTime @default(now()) @db.Timestamptz()
+
+  fineCalculations FineCalculation[]
+  invoices         Invoice[]
+
+  @@schema("violations")
+  @@map("violations")
+  @@index([plate, violation_timestamp])
+}
+
+model FineCalculation {
+  id               String   @id @default(uuid()) @db.Uuid
+  violation_id     String   @db.Uuid
+  rule_version_id   String   @db.Uuid
+  base_amount      Decimal  @db.Decimal(15, 2)
+  time_multiplier  Decimal  @db.Decimal(5, 2)
+  repeat_multiplier Decimal  @db.Decimal(5, 2)
+  total_fine       Decimal  @db.Decimal(15, 2)
+  calculated_at    DateTime @default(now()) @db.Timestamptz()
+
+  violation Violation @relation(fields: [violation_id], references: [id], onDelete: Cascade)
+
+  @@schema("violations")
+  @@map("fine_calculations")
+}
+
+model Invoice {
+  id           String   @id @default(uuid()) @db.Uuid
+  violation_id String   @db.Uuid
+  user_id      String?  @db.Uuid
+  amount       Decimal  @db.Decimal(15, 2)
+  status       String   @default("unpaid") @db.VarChar(20)
+  created_at   DateTime @default(now()) @db.Timestamptz()
+  updated_at   DateTime @default(now()) @db.Timestamptz()
+
+  violation    Violation          @relation(fields: [violation_id], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
+
+  @@schema("violations")
+  @@map("invoices")
+}
+
+model FineRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  version        Int      @unique
+  status         String   @default("active") @db.VarChar(20)
+  created_by     String?  @db.Uuid
+  effective_from DateTime @default(now()) @db.Timestamptz()
+  created_at     DateTime @default(now()) @db.Timestamptz()
+
+  details FineRuleDetail[]
+
+  @@schema("rules")
+  @@map("fine_rules")
+}
+
+model FineRuleDetail {
+  id                    String  @id @default(uuid()) @db.Uuid
+  rule_id               String  @db.Uuid
+  violation_type        String  @db.VarChar(50)
+  base_amount           Decimal @db.Decimal(15, 2)
+  time_multiplier_start DateTime @db.Time()
+  time_multiplier_end   DateTime @db.Time()
+  time_multiplier_value Decimal @db.Decimal(5, 2)
+  repeat_count_min      Int     @default(0)
+  repeat_multiplier     Decimal @db.Decimal(5, 2)
+
+  rule FineRule @relation(fields: [rule_id], references: [id], onDelete: Cascade)
+
+  @@schema("rules")
+  @@map("fine_rule_details")
+}
+
+model PaymentTransaction {
+  id             String   @id @default(uuid()) @db.Uuid
+  invoice_id     String   @db.Uuid
+  transaction_id String   @db.VarChar(255)
+  status         String   @db.VarChar(20)
+  scenario       String   @db.VarChar(20)
+  created_at     DateTime @default(now()) @db.Timestamptz()
+
+  invoice Invoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+
+  @@schema("payments")
+  @@map("transactions")
+}
