@@ -178,52 +178,49 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-    auth_users ||--o| profiles : "user_id"
-    profiles ||--o{ member_plates : "user_id"
-
-    fine_rules ||--o{ fine_rule_details : "rule_id"
-    fine_rules ||--o{ fine_calculations : "rule_version_id (NO CASCADE)"
-
-    violations ||--o{ fine_calculations : "violation_id (CASCADE)"
-    violations ||--o{ invoices : "violation_id (CASCADE)"
-
-    invoices ||--o{ transactions : "invoice_id (CASCADE)"
+    auth_users ||--o| profiles : user_id
+    profiles ||--o{ member_plates : user_id
+    fine_rules ||--o{ fine_rule_details : rule_id
+    fine_rules ||--o{ fine_calculations : rule_version_id
+    violations ||--o{ fine_calculations : violation_id
+    violations ||--o{ invoices : violation_id
+    invoices ||--o{ transactions : invoice_id
 
     auth_users {
-        uuid id PK
+        uuid id
     }
 
     profiles {
-        uuid user_id PK_FK
+        uuid user_id
         varchar role
         varchar full_name
         timestamptz created_at
     }
 
     member_plates {
-        uuid id PK
-        uuid user_id FK
-        varchar plate UK
+        uuid id
+        uuid user_id
+        varchar plate
         timestamptz created_at
     }
 
     violations {
-        uuid id PK
+        uuid id
         varchar plate
         varchar violation_type
         varchar location
         timestamptz violation_timestamp
         varchar photo_url
         varchar status
-        uuid submitted_by FK
+        uuid submitted_by
         timestamptz created_at
         timestamptz updated_at
     }
 
     fine_calculations {
-        uuid id PK
-        uuid violation_id FK
-        uuid rule_version_id FK
+        uuid id
+        uuid violation_id
+        uuid rule_version_id
         decimal base_amount
         decimal time_multiplier
         decimal repeat_multiplier
@@ -232,9 +229,9 @@ erDiagram
     }
 
     invoices {
-        uuid id PK
-        uuid violation_id FK
-        uuid user_id FK
+        uuid id
+        uuid violation_id
+        uuid user_id
         decimal amount
         varchar status
         timestamptz created_at
@@ -242,17 +239,17 @@ erDiagram
     }
 
     fine_rules {
-        uuid id PK
-        int version UK
+        uuid id
+        int version
         varchar status
-        uuid created_by FK
+        uuid created_by
         timestamptz effective_from
         timestamptz created_at
     }
 
     fine_rule_details {
-        uuid id PK
-        uuid rule_id FK
+        uuid id
+        uuid rule_id
         varchar violation_type
         decimal base_amount
         time time_multiplier_start
@@ -263,8 +260,8 @@ erDiagram
     }
 
     transactions {
-        uuid id PK
-        uuid invoice_id FK
+        uuid id
+        uuid invoice_id
         varchar transaction_id
         varchar status
         varchar scenario
