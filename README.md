@@ -18,8 +18,6 @@ All passwords: `test1234`
 | Member | `member2@test.com` | Plate: `B 9999 ZZ` — single vehicle |
 | Member | `member3@test.com` | Plate: `B 1111 AA`, `B 2222 BB` — two vehicles |
 
-> Register all 5 accounts on the live site, then run the SQL below to activate them.
-
 ## Architecture
 
 | Component | Language | Port | Description |
