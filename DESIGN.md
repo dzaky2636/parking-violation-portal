@@ -1,31 +1,5 @@
 # DESIGN.md — Parking Violation Portal
 
-## Architecture Overview
-
-```
-┌──────────┐     ┌─────────────┐     ┌───────────────┬──────────────┬──────────────┐
-│  Next.js │────▶│  API Gateway │────▶│  Fine Rule    │  Violation   │  Payment     │
-│ Frontend │     │  (Go, :8080) │     │  Service      │  Service     │  Service     │
-│ (:3000)  │     │              │     │  (Go, :8083)  │  (Go, :8082) │  (Go, :8084) │
-└──────────┘     │  JWT Auth    │     └──────┬────────┴──────┬───────┴──────┬───────┘
-                 │  Role Gate   │            │               │              │
-                 │  Proxy       │            │               │              │
-                 └──────┬───────┘            │               │              │
-                         │                    │          ┌─────────┐         │
-                         │                    │          │Event Bus│         │
-                         │                    │          └─────────┘         │
-                        │                    │               │              │
-                        ▼                    ▼               ▼              ▼
-                 ┌─────────────────────────────────────────────────────────────┐
-                 │                    Supabase Cloud                             │
-                 │  ┌──────────┐  ┌───────────┐  ┌─────────────────────────┐   │
-                 │  │  Auth    │  │PostgreSQL │  │ Object Storage (photos) │   │
-                 │  └──────────┘  │   (4      │  └─────────────────────────┘   │
-                 │                │ schemas)  │                                 │
-                 │                └───────────┘                                 │
-                 └─────────────────────────────────────────────────────────────┘
-```
-
 ### Service Boundaries
 
 | Service | Port | Responsibility | Sync/Async |
