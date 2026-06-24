@@ -42,41 +42,7 @@
 
 ### Flow 1: Officer Submits Violation
 
-```mermaid
-sequenceDiagram
-    actor Officer
-    participant UI as Next.js Frontend
-    participant GW as API Gateway
-    participant VS as Violation Service
-    participant Storage as Supabase Storage
-    participant DB as Supabase PostgreSQL
-    participant Bus as Event Bus
-    participant Consumer as Event Consumer
-    participant FRS as Fine Rule Service
-
-    Officer->>UI: Fill form (plate, type, location, time, photo)
-    UI->>GW: POST /api/violations (multipart)
-    GW->>GW: Validate JWT, check role=officer
-    GW->>VS: proxy POST /api/violations
-    VS->>Storage: Upload photo
-    Storage-->>VS: public URL
-    VS->>DB: INSERT violations.violations (status=pending)
-    VS->>Bus: Publish "violation.created" event
-    VS-->>GW: 201 { violation_id, ... }
-    GW-->>UI: 201 { violation_id, ... }
-    UI-->>Officer: Show success
-
-    Note over Consumer,FRS: Async: fine calculation
-    Bus->>Consumer: Consume "violation.created"
-    Consumer->>DB: SELECT violation details
-    Consumer->>FRS: POST /api/rules/calculate
-    FRS->>DB: Get active rule + compute fine
-    FRS-->>Consumer: { base_amount, time_multiplier, repeat_multiplier, total_fine, rule_version_id }
-    Consumer->>DB: INSERT violations.fine_calculations
-    Consumer->>DB: INSERT violations.invoices (status=unpaid)
-    Consumer->>DB: UPDATE violations SET status='invoiced'
-    Consumer->>Bus: Publish "invoice.created"
-```
+![Flow 1 & 2: Violation Submission + Fine Calculation](flow-1-2.png)
 
 **Synchronous:** Photo upload, violation creation, event publish  
 **Asynchronous:** Fine calculation, calculation snapshot storage, invoice creation  
@@ -96,179 +62,23 @@ Same as the async portion of Flow 1. The Violation Service consumer:
 
 ### Flow 3: Officer Updates Fine Rules
 
-```mermaid
-sequenceDiagram
-    actor Officer
-    participant UI as Next.js Frontend
-    participant GW as API Gateway
-    participant FRS as Fine Rule Service
-    participant DB as Supabase PostgreSQL
-
-    Officer->>UI: POST /api/rules (new rule version)
-    UI->>GW: POST /api/rules { base_amounts, time_multipliers, repeat_multipliers }
-    GW->>GW: Validate JWT, check role=officer
-    GW->>FRS: proxy POST /api/rules
-    FRS->>DB: BEGIN transaction
-    FRS->>DB: SELECT MAX(version) + 1
-    FRS->>DB: UPDATE fine_rules SET status='superseded' WHERE status='active'
-    FRS->>DB: INSERT fine_rules (version=N+1, status='active')
-    FRS->>DB: INSERT fine_rule_details (cartesian product of types × times × repeats)
-    FRS->>DB: COMMIT
-    FRS-->>GW: 201 { id, version, details[] }
-    GW-->>UI: 201 { id, version, details[] }
-    UI-->>Officer: Show new rule
-
-    Note over Officer,DB: Existing violations keep their fine_calculation.rule_version_id
-    Note over Officer,DB: FK has NO CASCADE — immutable snapshot preserved
-```
+![Flow 3: Officer Updates Fine Rules](flow-3.png)
 
 **Rule versioning protects historical fines:** Each `FineCalculation` stores `rule_version_id` → `FineRule.id`. The FK to `fine_rules` has NO CASCADE DELETE. When a new rule is published, the old rule is marked `superseded` but never deleted. Existing violations maintain their original fine calculation with a reference to the exact rule version used.
 
 ### Flow 4: Member Pays Fine
 
-```mermaid
-sequenceDiagram
-    actor Member
-    participant UI as Next.js Frontend
-    participant GW as API Gateway
-    participant PS as Payment Service
-    participant DB as Supabase PostgreSQL
-
-    Member->>UI: Select invoice, choose scenario (success/failed)
-    UI->>GW: POST /api/payments { invoice_id, scenario }
-    GW->>GW: Validate JWT, check role=member
-    GW->>PS: proxy POST /api/payments (X-User-ID injected)
-    PS->>DB: SELECT invoice (verify user_id matches X-User-ID)
-    PS->>PS: mock.PaymentService.charge(invoice_id, amount, scenario)
-    PS->>DB: INSERT payments.transactions
-    alt scenario = success
-        PS->>DB: UPDATE invoice SET status='paid'
-        PS->>DB: UPDATE violation SET status='paid'
-        PS-->>GW: 200 { status: "paid", transaction_id }
-    else scenario = failed
-        PS-->>GW: 200 { status: "failed", transaction_id }
-    end
-    GW-->>UI: 200 { status, transaction_id }
-    UI-->>Member: Show result
-```
+![Flow 4: Member Pays Fine](flow-4.png)
 
 ### Flow 5: Transaction History
 
-```mermaid
-sequenceDiagram
-    actor Member
-    participant UI as Next.js Frontend
-    participant GW as API Gateway
-    participant VS as Violation Service
-    participant DB as Supabase PostgreSQL
-
-    Member->>UI: View violations / history
-    UI->>GW: GET /api/violations
-    GW->>GW: Validate JWT, inject X-User-ID + X-User-Role
-    GW->>VS: proxy GET /api/violations (headers injected)
-    VS->>VS: If role=member: filter by member_plates
-    VS->>DB: SELECT violations LEFT JOIN fine_calculations LEFT JOIN invoices LEFT JOIN LATERAL payments.transactions
-    VS-->>GW: [{ violation, fine_calculation, invoice, payment_status, transaction_id }]
-    GW-->>UI: [{ violation, fine, rule_version, payment_status }]
-    UI-->>Member: Show history table
-```
+![Flow 5: Transaction History](flow-5.png)
 
 ---
 
 ## Entity Relationship Diagram
 
-```mermaid
-erDiagram
-    auth_users ||--o| profiles : user_id
-    profiles ||--o{ member_plates : user_id
-    fine_rules ||--o{ fine_rule_details : rule_id
-    fine_rules ||--o{ fine_calculations : rule_version_id
-    violations ||--o{ fine_calculations : violation_id
-    violations ||--o{ invoices : violation_id
-    invoices ||--o{ transactions : invoice_id
-
-    auth_users {
-        uuid id
-    }
-
-    profiles {
-        uuid user_id
-        varchar role
-        varchar full_name
-        timestamptz created_at
-    }
-
-    member_plates {
-        uuid id
-        uuid user_id
-        varchar plate
-        timestamptz created_at
-    }
-
-    violations {
-        uuid id
-        varchar plate
-        varchar violation_type
-        varchar location
-        timestamptz violation_timestamp
-        varchar photo_url
-        varchar status
-        uuid submitted_by
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    fine_calculations {
-        uuid id
-        uuid violation_id
-        uuid rule_version_id
-        decimal base_amount
-        decimal time_multiplier
-        decimal repeat_multiplier
-        decimal total_fine
-        timestamptz calculated_at
-    }
-
-    invoices {
-        uuid id
-        uuid violation_id
-        uuid user_id
-        decimal amount
-        varchar status
-        timestamptz created_at
-        timestamptz updated_at
-    }
-
-    fine_rules {
-        uuid id
-        int version
-        varchar status
-        uuid created_by
-        timestamptz effective_from
-        timestamptz created_at
-    }
-
-    fine_rule_details {
-        uuid id
-        uuid rule_id
-        varchar violation_type
-        decimal base_amount
-        time time_multiplier_start
-        time time_multiplier_end
-        decimal time_multiplier_value
-        int repeat_count_min
-        decimal repeat_multiplier
-    }
-
-    transactions {
-        uuid id
-        uuid invoice_id
-        varchar transaction_id
-        varchar status
-        varchar scenario
-        timestamptz created_at
-    }
-```
+![Entity Relationship Diagram](erd.png)
 
 ### PostgreSQL Schemas
 
