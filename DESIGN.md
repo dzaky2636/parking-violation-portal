@@ -11,9 +11,9 @@
                  │  Role Gate   │            │               │              │
                  │  Proxy       │            │               │              │
                  └──────┬───────┘            │               │              │
-                        │                    │          ┌────┴────┐         │
-                        │                    │          │RabbitMQ │         │
-                        │                    │          └─────────┘         │
+                         │                    │          ┌─────────┐         │
+                         │                    │          │Event Bus│         │
+                         │                    │          └─────────┘         │
                         │                    │               │              │
                         ▼                    ▼               ▼              ▼
                  ┌─────────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@
 |---------|------|---------------|------------|
 | API Gateway | 8080 | JWT validation, role gate, reverse proxy | Sync |
 | Fine Rule Service | 8083 | Rule version CRUD, fine calculation engine | Sync |
-| Violation Service | 8082 | Violation CRUD, photo upload, RabbitMQ pub/consumer | Sync + Async |
+| Violation Service | 8082 | Violation CRUD, photo upload, event bus pub/consumer | Sync + Async |
 | Payment Service | 8084 | Mock charge, transaction storage | Sync |
 | Frontend (Next.js) | 3000 | Officer + Member UI | Sync |
 
@@ -50,8 +50,8 @@ sequenceDiagram
     participant VS as Violation Service
     participant Storage as Supabase Storage
     participant DB as Supabase PostgreSQL
-    participant MQ as RabbitMQ
-    participant Consumer as RabbitMQ Consumer
+    participant MQ as Event Bus
+    participant Consumer as Event Consumer
     participant FRS as Fine Rule Service
 
     Officer->>UI: Fill form (plate, type, location, time, photo)
@@ -85,7 +85,7 @@ sequenceDiagram
 ### Flow 2: System Calculates Fine (Async)
 
 Same as the async portion of Flow 1. The Violation Service consumer:
-1. Receives `violation.created` from RabbitMQ
+1. Receives `violation.created` from the event bus
 2. Calls `POST /api/rules/calculate` on Fine Rule Service
 3. Fine Rule Service reads the active rule from `rules.fine_rules` + `rules.fine_rule_details`
 4. Applies formula: `base_amount × time_multiplier × repeat_multiplier`
@@ -195,7 +195,7 @@ erDiagram
 
     profiles {
         uuid user_id PK_FK
-        varchar role "officer | member"
+        varchar role
         varchar full_name
         timestamptz created_at
     }
@@ -210,11 +210,11 @@ erDiagram
     violations {
         uuid id PK
         varchar plate
-        varchar violation_type "expired_meter | no_parking_zone | blocking_hydrant | disabled_spot"
+        varchar violation_type
         varchar location
         timestamptz violation_timestamp
-        varchar photo_url "Supabase Storage public URL"
-        varchar status "pending → invoiced → paid"
+        varchar photo_url
+        varchar status
         uuid submitted_by FK
         timestamptz created_at
         timestamptz updated_at
@@ -223,7 +223,7 @@ erDiagram
     fine_calculations {
         uuid id PK
         uuid violation_id FK
-        uuid rule_version_id FK "→ fine_rules.id (IMMUTABLE SNAPSHOT)"
+        uuid rule_version_id FK
         decimal base_amount
         decimal time_multiplier
         decimal repeat_multiplier
@@ -234,17 +234,17 @@ erDiagram
     invoices {
         uuid id PK
         uuid violation_id FK
-        uuid user_id FK "Member who owns the plate"
+        uuid user_id FK
         decimal amount
-        varchar status "unpaid | paid | cancelled"
+        varchar status
         timestamptz created_at
         timestamptz updated_at
     }
 
     fine_rules {
         uuid id PK
-        int version UK "Auto-increment per new publication"
-        varchar status "active | superseded"
+        int version UK
+        varchar status
         uuid created_by FK
         timestamptz effective_from
         timestamptz created_at
@@ -265,9 +265,9 @@ erDiagram
     transactions {
         uuid id PK
         uuid invoice_id FK
-        varchar transaction_id "Mock payment transaction ID"
-        varchar status "paid | failed"
-        varchar scenario "success | failed"
+        varchar transaction_id
+        varchar status
+        varchar scenario
         timestamptz created_at
     }
 ```
@@ -285,7 +285,7 @@ erDiagram
 
 1. **Rule versioning is immutable**: `fine_calculations.rule_version_id` references `fine_rules(id)` with NO CASCADE. New rule publications mark old rules as `superseded` — never delete. Each violation's fine is permanently linked to the exact rule version used at calculation time.
 
-2. **Async fine calculation via RabbitMQ**: Officer submits a violation synchronously (gets immediate confirmation), then the consumer processes it asynchronously. This decouples the submission from the calculation and prevents slow DB queries from blocking the officer's UX.
+2. **Async fine calculation via event bus**: Officer submits a violation synchronously (gets immediate confirmation), then the consumer processes it asynchronously. This decouples the submission from the calculation and prevents slow DB queries from blocking the officer's UX. The event bus uses Go channels for in-process pub/sub, avoiding external broker dependencies.
 
 3. **Cross-schema foreign keys**: `fine_calculations.rule_version_id → rules.fine_rules(id)` connects the violations schema to the rules schema. This is intentionally a manual FK (not in Prisma schema) to prevent accidental migrations from altering it.
 
