@@ -163,9 +163,10 @@ sequenceDiagram
     participant DB as Supabase PostgreSQL
 
     Member->>UI: View violations / history
-    UI->>GW: GET /api/violations?user_id=X
-    GW->>GW: Validate JWT, inject X-User-ID
-    GW->>VS: proxy GET /api/violations?user_id=X
+    UI->>GW: GET /api/violations
+    GW->>GW: Validate JWT, inject X-User-ID + X-User-Role
+    GW->>VS: proxy GET /api/violations (headers injected)
+    VS->>VS: If role=member: filter by member_plates
     VS->>DB: SELECT violations LEFT JOIN fine_calculations LEFT JOIN invoices LEFT JOIN LATERAL payments.transactions
     VS-->>GW: [{ violation, fine_calculation, invoice, payment_status, transaction_id }]
     GW-->>UI: [{ violation, fine, rule_version, payment_status }]

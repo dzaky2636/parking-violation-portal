@@ -132,9 +132,9 @@ All requests go through the API Gateway (`:8080`). Internal services are not dir
 | Method | Path | Role | Description |
 |--------|------|------|-------------|
 | POST | /api/violations | officer | Submit violation (multipart: plate, type, location, timestamp, photo) |
-| GET | /api/violations | both | List violations (officer: all; member: own via ?user_id) |
+| GET | /api/violations | both | List violations (officer: all; member: auto-filtered by role) |
 | GET | /api/violations/{id} | both | Single violation with fine + invoice + payment |
-| GET | /api/rules/active | both | Current active fine rule with details |
+| GET | /api/rules/active | officer | Current active fine rule with details |
 | GET | /api/rules | officer | All rule versions (history) |
 | GET | /api/rules/{id} | officer | Single rule with details |
 | POST | /api/rules | officer | Create new rule version (supersedes active) |
