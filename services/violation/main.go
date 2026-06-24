@@ -64,6 +64,8 @@ func main() {
 	if supabaseURL != "" && supabaseServiceKey != "" {
 		st = storage.NewSupabaseStorage(supabaseURL, supabaseServiceKey, storageBucket)
 		log.Println("supabase storage configured")
+	} else {
+		log.Println("WARNING: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set — photo upload disabled")
 	}
 
 	h := &handlers.Handler{

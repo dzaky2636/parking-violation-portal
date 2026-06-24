@@ -63,7 +63,7 @@ func (h *Handler) CreateViolation(w http.ResponseWriter, r *http.Request) {
 
 	var photoURL string
 	file, header, err := r.FormFile("photo")
-	if err == nil {
+	if err == nil && h.Storage != nil {
 		defer file.Close()
 		photoURL, err = h.Storage.UploadPhoto(file, header)
 		if err != nil {
