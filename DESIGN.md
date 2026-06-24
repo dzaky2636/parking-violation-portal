@@ -50,7 +50,7 @@ sequenceDiagram
     participant VS as Violation Service
     participant Storage as Supabase Storage
     participant DB as Supabase PostgreSQL
-    participant MQ as Event Bus
+    participant Bus as Event Bus
     participant Consumer as Event Consumer
     participant FRS as Fine Rule Service
 
@@ -61,13 +61,13 @@ sequenceDiagram
     VS->>Storage: Upload photo
     Storage-->>VS: public URL
     VS->>DB: INSERT violations.violations (status=pending)
-    VS->>MQ: Publish "violation.created" event
+    VS->>Bus: Publish "violation.created" event
     VS-->>GW: 201 { violation_id, ... }
     GW-->>UI: 201 { violation_id, ... }
     UI-->>Officer: Show success
 
     Note over Consumer,FRS: Async: fine calculation
-    MQ->>Consumer: Consume "violation.created"
+    Bus->>Consumer: Consume "violation.created"
     Consumer->>DB: SELECT violation details
     Consumer->>FRS: POST /api/rules/calculate
     FRS->>DB: Get active rule + compute fine
@@ -75,7 +75,7 @@ sequenceDiagram
     Consumer->>DB: INSERT violations.fine_calculations
     Consumer->>DB: INSERT violations.invoices (status=unpaid)
     Consumer->>DB: UPDATE violations SET status='invoiced'
-    Consumer->>MQ: Publish "invoice.created"
+    Consumer->>Bus: Publish "invoice.created"
 ```
 
 **Synchronous:** Photo upload, violation creation, event publish  
