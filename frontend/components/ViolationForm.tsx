@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { apiPostForm } from '@/lib/api'
 import type { Violation } from '@/types'
+import { AlertTriangle, ImageIcon, Loader2, ShieldAlert } from 'lucide-react'
 
 const VIOLATION_TYPES = [
   { value: 'expired_meter', label: 'Expired Meter', description: 'Parking meter expired' },
@@ -57,9 +58,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
       <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.293-5.879-4.293 4.293M3.707 6.121l4.293 4.293M12 15.75h.007v.008H12v-.008Z" />
-            </svg>
+            <ShieldAlert className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Submit Violation</h2>
@@ -71,9 +70,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
       <div className="p-6">
         {error && (
           <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-            </svg>
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </div>
         )}
@@ -162,9 +159,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
                 />
                 {photoName && (
                   <p className="mt-2 flex items-center gap-2 text-xs text-slate-600">
-                    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H3.75A2.25 2.25 0 0 0 1.5 6v12a2.25 2.25 0 0 0 2.25 2.25Z" />
-                    </svg>
+                    <ImageIcon className="h-4 w-4 text-indigo-500" />
                     {photoName}
                   </p>
                 )}
@@ -195,10 +190,7 @@ export default function ViolationForm({ onSuccess }: { onSuccess?: (v: Violation
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Submitting...
               </span>
             ) : (

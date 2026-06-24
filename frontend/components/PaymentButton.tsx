@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { apiPost } from '@/lib/api'
 import type { ViolationWithDetails, PaymentResponse } from '@/types'
+import { CreditCard, AlertTriangle, CircleCheck, Loader2 } from 'lucide-react'
 
 function formatIDR(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
@@ -49,15 +50,9 @@ export default function PaymentButton({
       <div className={`overflow-hidden rounded-2xl border ${isPaid ? 'border-emerald-200 bg-emerald-50/50' : 'border-rose-200 bg-rose-50/50'}`}>
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isPaid ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                {isPaid ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9.293-5.879-4.293 4.293M3.707 6.121l4.293 4.293M12 15.75h.007v.008H12v-.008Z" />
-                )}
-              </svg>
-            </div>
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${isPaid ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                {isPaid ? <CircleCheck className="h-6 w-6" /> : <AlertTriangle className="h-6 w-6" />}
+              </div>
             <div>
               <h3 className={`text-lg font-semibold ${isPaid ? 'text-emerald-900' : 'text-rose-900'}`}>
                 {isPaid ? 'Payment Successful' : 'Payment Failed'}
@@ -84,9 +79,7 @@ export default function PaymentButton({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
-              </svg>
+              <CreditCard className="h-5 w-5" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Pay Fine</h3>
@@ -105,9 +98,7 @@ export default function PaymentButton({
       <div className="p-6">
         {error && (
           <div className="mb-5 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-            </svg>
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </div>
         )}
@@ -160,10 +151,7 @@ export default function PaymentButton({
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
-              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+              <Loader2 className="h-4 w-4 animate-spin" />
               Processing...
             </span>
           ) : (

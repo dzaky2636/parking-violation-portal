@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { ShieldCheck, LogOut } from 'lucide-react'
 
 export default function Navbar() {
   const [role, setRole] = useState<string | null>(null)
@@ -53,9 +54,7 @@ export default function Navbar() {
             className="flex items-center gap-2"
           >
             <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accentBg} ${accentBorder} border`}>
-              <svg className={`h-4 w-4 ${accentText}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-              </svg>
+              <ShieldCheck className={`h-4 w-4 ${accentText}`} />
             </div>
             <div>
               <span className="text-sm font-bold tracking-tight text-slate-900">PVP</span>
@@ -93,15 +92,13 @@ export default function Navbar() {
             {role}
           </span>
 
-          <button
-            onClick={handleSignOut}
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            title="Sign out"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-            </svg>
-          </button>
+            <button
+              onClick={handleSignOut}
+              className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              title="Sign out"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
         </div>
       </div>
     </nav>
