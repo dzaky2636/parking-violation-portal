@@ -36,12 +36,19 @@ export default function PaymentButton({
         scenario,
       })
       setResult(res)
-      onPaid?.(res)
+      if (res.status === 'paid') {
+        onPaid?.(res)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed')
     } finally {
       setLoading(false)
     }
+  }
+
+  const reset = () => {
+    setResult(null)
+    setError('')
   }
 
   if (result) {
@@ -66,6 +73,22 @@ export default function PaymentButton({
                 <p className="text-xs text-slate-500">Transaction ID</p>
                 <p className="font-mono text-sm font-medium text-slate-900">{result.transaction_id}</p>
               </div>
+              {!isPaid && (
+                <button
+                  onClick={reset}
+                  className="mt-4 w-full rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+                >
+                  Try Again
+                </button>
+              )}
+              {isPaid && (
+                <button
+                  onClick={reset}
+                  className="mt-4 w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              )}
             </div>
           </div>
         </div>
