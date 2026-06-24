@@ -2,6 +2,19 @@
 
 A full-stack parking violation management system with Go microservices backend and Next.js frontend.
 
+## Live Demo
+
+**Production URL:** [https://parking-violation-portal-nine.vercel.app](https://parking-violation-portal-nine.vercel.app)
+
+**Test Credentials:**
+
+| Role | Email | Password |
+|------|-------|----------|
+| Officer | `officer@test.com` | (any password you set during registration) |
+| Member | `member@test.com` | (any password you set during registration) |
+
+> Register these two accounts on the live site, then run the profile seed in Supabase SQL Editor to activate them. See [Step 5: Create Test Users](#5-create-test-users).
+
 ## Architecture
 
 | Component | Language | Port | Description |
