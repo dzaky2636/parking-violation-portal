@@ -54,7 +54,7 @@ services:
     environment:
       DATABASE_URL: ${SUPABASE_DATABASE_URL}
       SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       FINE_RULE_SERVICE_URL: http://fine-rule:8083
       VIOLATION_SERVICE_URL: http://violation:8082
       PAYMENT_SERVICE_URL: http://payment:8084
@@ -74,7 +74,7 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       NEXT_PUBLIC_API_GATEWAY_URL: http://api-gateway:8080
     depends_on:
       - api-gateway

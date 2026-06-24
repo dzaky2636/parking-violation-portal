@@ -18,7 +18,7 @@ A full-stack parking violation management system with Go microservices backend a
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Go 1.22+ and Node.js 22+
 - A Supabase project with the database schema applied
 
 ### 1. Configure Environment
@@ -27,7 +27,7 @@ Copy the root `.env` file or create one with your Supabase credentials:
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_ANON_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 SUPABASE_DATABASE_URL=postgresql://postgres.xxx:[password]@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres
 ```
@@ -53,6 +53,11 @@ In the Supabase dashboard, create a public bucket called `violation-photos` for 
 ### 4. Start Services
 
 ```bash
+# Local development (no Docker needed)
+./start.sh                    # launches all 4 backend services
+cd frontend && npm run dev    # in a second terminal, launches frontend
+
+# Or using Docker
 docker compose up --build
 ```
 
@@ -63,13 +68,23 @@ Services will start in order: Fine Rule → Violation → Payment → API Gatewa
 
 ### 5. Create Test Users
 
-1. Register two users via Supabase Auth (or the login page)
-2. Insert profiles in your Supabase SQL editor:
+1. Register two users at http://localhost:3000/login:
+   - `officer@test.com` (any password)
+   - `member@test.com` (any password)
+2. Get their UUIDs from **Supabase Dashboard → Authentication → Users**
+3. Run the profile seed script:
+
+```bash
+OFFICER_ID=<officer-uuid> MEMBER_ID=<member-uuid> MEMBER_PLATE='B 1234 XYZ' \
+  go run scripts/seed_profiles.go
+```
+
+This creates officer and member profiles plus a registered plate for the member. Alternatively, run this in the Supabase SQL editor:
 
 ```sql
-INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<officer-uuid>', 'officer', 'Officer Name');
-INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<member-uuid>', 'member', 'Member Name');
-INSERT INTO public.member_plates (id, user_id, plate) VALUES (gen_random_uuid()::uuid, '<member-uuid>', 'B 1234 XYZ');
+INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<officer-uuid>', 'officer', 'Test Officer');
+INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<member-uuid>', 'member', 'Test Member');
+INSERT INTO public.member_plates (id, user_id, plate) VALUES (gen_random_uuid(), '<member-uuid>', 'B 1234 XYZ');
 ```
 
 ## Endpoints
