@@ -8,10 +8,17 @@ A full-stack parking violation management system with Go microservices backend a
 
 **Test Credentials:**
 
-| Role | Email | Password |
-|------|-------|----------|
-| Officer | `officer@test.com` | test1234 |
-| Member | `member@test.com` | test1234 |
+All passwords: `test1234`
+
+| Role | Email | Note |
+|------|-------|------|
+| Officer | `officer@test.com` | Primary officer — submit violations, manage rules |
+| Officer | `officer2@test.com` | Secondary officer — can also submit and manage rules |
+| Member | `member@test.com` | Plate: `B 1234 XYZ`, `B 5678 AB` — test repeat offenders |
+| Member | `member2@test.com` | Plate: `B 9999 ZZ` — single vehicle |
+| Member | `member3@test.com` | Plate: `B 1111 AA`, `B 2222 BB` — two vehicles |
+
+> Register all 5 accounts on the live site, then run the SQL below to activate them.
 
 ## Architecture
 
@@ -79,24 +86,46 @@ Services will start in order: Fine Rule → Violation → Payment → API Gatewa
 
 ### 5. Create Test Users
 
-1. Register two users at http://localhost:3000/login:
-   - `officer@test.com` (any password)
-   - `member@test.com` (any password)
+1. Register these 5 accounts at http://localhost:3000/login (any password):
+   - `officer@test.com`, `officer2@test.com`
+   - `member@test.com`, `member2@test.com`, `member3@test.com`
 2. Get their UUIDs from **Supabase Dashboard → Authentication → Users**
-3. Run the profile seed script:
-
-```bash
-OFFICER_ID=<officer-uuid> MEMBER_ID=<member-uuid> MEMBER_PLATE='B 1234 XYZ' \
-  go run scripts/seed_profiles.go
-```
-
-This creates officer and member profiles plus a registered plate for the member. Alternatively, run this in the Supabase SQL editor:
+3. Replace `<UUID>` placeholders below and run in the Supabase SQL Editor:
 
 ```sql
-INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<officer-uuid>', 'officer', 'Test Officer');
-INSERT INTO public.profiles (user_id, role, full_name) VALUES ('<member-uuid>', 'member', 'Test Member');
-INSERT INTO public.member_plates (id, user_id, plate) VALUES (gen_random_uuid(), '<member-uuid>', 'B 1234 XYZ');
+-- Officer profiles
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('<OFFICER1_UUID>', 'officer', 'Officer One');
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('<OFFICER2_UUID>', 'officer', 'Officer Two');
+
+-- Member profiles
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('<MEMBER1_UUID>', 'member', 'Member One');
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('<MEMBER2_UUID>', 'member', 'Member Two');
+INSERT INTO public.profiles (user_id, role, full_name)
+VALUES ('<MEMBER3_UUID>', 'member', 'Member Three');
+
+-- Plate registrations
+-- member@test.com — 2 plates (test repeat offenders)
+INSERT INTO public.member_plates (id, user_id, plate)
+VALUES (gen_random_uuid(), '<MEMBER1_UUID>', 'B 1234 XYZ');
+INSERT INTO public.member_plates (id, user_id, plate)
+VALUES (gen_random_uuid(), '<MEMBER1_UUID>', 'B 5678 AB');
+
+-- member2@test.com — 1 plate
+INSERT INTO public.member_plates (id, user_id, plate)
+VALUES (gen_random_uuid(), '<MEMBER2_UUID>', 'B 9999 ZZ');
+
+-- member3@test.com — 2 plates
+INSERT INTO public.member_plates (id, user_id, plate)
+VALUES (gen_random_uuid(), '<MEMBER3_UUID>', 'B 1111 AA');
+INSERT INTO public.member_plates (id, user_id, plate)
+VALUES (gen_random_uuid(), '<MEMBER3_UUID>', 'B 2222 BB');
 ```
+
+This creates 2 officers, 3 members, and 5 plate registrations. Member 1 has 2 plates for testing repeat offender multipliers (ticket `B 1234 XYZ` twice within 90 days to trigger `repeat_multiplier = 1.5`).
 
 ## Endpoints
 
