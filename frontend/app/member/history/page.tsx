@@ -74,6 +74,7 @@ export default function HistoryPage() {
                   <th className="px-6 py-4 font-semibold">Date</th>
                   <th className="px-6 py-4 font-semibold">Plate</th>
                   <th className="px-6 py-4 font-semibold">Type</th>
+                  <th className="px-6 py-4 font-semibold">Photo</th>
                   <th className="px-6 py-4 text-right font-semibold">Fine</th>
                   <th className="px-6 py-4 text-center font-semibold">Rule Version</th>
                   <th className="px-6 py-4 text-center font-semibold">Payment</th>
@@ -94,6 +95,19 @@ export default function HistoryPage() {
                       </td>
                       <td className="px-6 py-4 font-mono font-semibold uppercase tracking-wide text-slate-900">{v.plate}</td>
                       <td className="px-6 py-4 capitalize text-slate-700">{v.violation_type.replace(/_/g, ' ')}</td>
+                      <td className="px-6 py-4">
+                        {v.photo_url ? (
+                          <a href={v.photo_url} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={v.photo_url}
+                              alt={`Evidence — ${v.plate}`}
+                              className="h-8 w-8 rounded border border-slate-200 object-cover hover:opacity-80 transition-opacity"
+                            />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-right font-mono font-medium text-slate-900">
                         {v.fine_calculation ? formatIDR(v.fine_calculation.total_fine) : '—'}
                       </td>

@@ -81,6 +81,7 @@ export default function ViolationList({
               <th className="px-6 py-4 font-semibold">Plate</th>
               <th className="px-6 py-4 font-semibold">Type</th>
               <th className="px-6 py-4 font-semibold">Location</th>
+              <th className="px-6 py-4 font-semibold">Photo</th>
               <th className="px-6 py-4 font-semibold">Date</th>
               <th className="px-6 py-4 text-right font-semibold">Fine</th>
               <th className="px-6 py-4 text-center font-semibold">Status</th>
@@ -108,6 +109,19 @@ export default function ViolationList({
                     <span className="max-w-xs truncate text-slate-600" title={v.location}>
                       {v.location}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    {v.photo_url ? (
+                      <a href={v.photo_url} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={v.photo_url}
+                          alt={`Violation evidence — ${v.plate}`}
+                          className="h-10 w-10 rounded-lg border border-slate-200 object-cover hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-slate-600">
                     {new Date(v.violation_timestamp).toLocaleDateString('id-ID', {
