@@ -5,6 +5,7 @@ A full-stack parking violation management system with Go microservices backend a
 ## Live Demo
 
 **Production URL:** [https://parking-violation-portal-nine.vercel.app](https://parking-violation-portal-nine.vercel.app)
+(IMPORTANT NOTE: In production, uploading image doesn't work currently for violation, but it works in local. There are some issues with the variables in Railway. Currently being fixed.)
 
 **Test Credentials:**
 
